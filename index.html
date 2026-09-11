@@ -4,17 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Monitor de Incêndios Aeroespaciais - Brasil</title>
-  <!-- Não use integrity copiado/incorreto: quando o hash não confere, o CSS é bloqueado. -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     :root { --primary:#e65100; --dark:#212121; --light:#f5f5f5; }
     * { box-sizing:border-box; }
     html, body { width:100%; height:100%; }
     body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; margin:0; background:var(--light); color:var(--dark); }
-
     #cadastro-container { display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px; }
-    .card-cadastro { background:#fff; padding:30px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,.1); width:100%; max-width:450px; }
+    .card-cadastro { background:#fff; padding:30px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,.1); width:100%; max-width:470px; }
     .card-cadastro h2 { margin-top:0; color:var(--primary); text-align:center; }
+    .card-cadastro p { text-align:center; font-size:13px; color:#666; }
     .form-group { margin-bottom:15px; }
     .form-group label { display:block; margin-bottom:5px; font-weight:600; font-size:14px; }
     .form-group input { width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; }
@@ -24,7 +23,12 @@
     .btn-enviar:hover { background:#b33900; }
     .btn-enviar:disabled { background:#ccc; cursor:not-allowed; }
     .erro-api { color:#b00020; font-size:13px; margin-top:12px; text-align:center; }
-
+    .sucesso-api { color:#176b2c; font-size:13px; margin-top:12px; text-align:center; line-height:1.5; }
+    .abas { display:flex; margin-bottom:20px; border-bottom:1px solid #ddd; }
+    .aba { flex:1; padding:10px; border:0; background:transparent; cursor:pointer; font-weight:600; color:#777; }
+    .aba.ativa { color:var(--primary); border-bottom:3px solid var(--primary); }
+    .senha-gerada { background:#fff3e0; border:1px solid #ffcc80; border-radius:6px; padding:12px; margin-top:14px; text-align:center; }
+    .senha-gerada strong { display:block; font-size:24px; letter-spacing:2px; color:var(--primary); margin:5px 0; }
     #monitor-container { display:none; flex-direction:column; width:100%; height:100vh; min-height:500px; }
     .kpi-bar { flex:0 0 auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:15px; padding:15px; background:#fff; box-shadow:0 2px 10px rgba(0,0,0,.05); z-index:1000; }
     .kpi-card { background:#fff3e0; border-left:5px solid var(--primary); padding:15px; border-radius:6px; box-shadow:0 2px 5px rgba(0,0,0,.05); }
@@ -40,23 +44,35 @@
   <div id="cadastro-container">
     <div class="card-cadastro">
       <h2>Acesso ao Monitor</h2>
-      <p style="text-align:center;font-size:13px;color:#666;margin-bottom:20px">Preencha seus dados de interesse para liberar o mapa com dados de satélite.</p>
-      <form id="form-cadastro">
+      <p>Entre com sua senha de acesso ou faça seu cadastro para liberar o mapa com dados de satélite.</p>
+      <div class="abas">
+        <button type="button" class="aba ativa" id="aba-entrar">Já tenho senha</button>
+        <button type="button" class="aba" id="aba-cadastrar">Quero me cadastrar</button>
+      </div>
+
+      <form id="form-entrar">
+        <div class="form-group"><label for="email-login">E-mail cadastrado</label><input type="email" id="email-login" required placeholder="joao@email.com"></div>
+        <div class="form-group"><label for="senha-login">Senha de acesso</label><input type="text" id="senha-login" required pattern="EU[0-9]{3}" maxlength="5" placeholder="EU123" autocomplete="off"></div>
+        <button type="submit" class="btn-enviar" id="btn-login">Acessar mapa</button>
+      </form>
+
+      <form id="form-cadastro" style="display:none">
         <div class="form-group"><label for="nome">Nome Completo</label><input type="text" id="nome" required placeholder="Ex.: João Silva"></div>
         <div class="form-group"><label for="profissao">Profissão</label><input type="text" id="profissao" required placeholder="Ex.: Estudante, Engenheiro"></div>
         <div class="form-group"><label for="idade">Idade</label><input type="number" id="idade" required min="1" max="120" placeholder="Ex.: 24"></div>
         <div class="form-group"><label for="whatsapp">WhatsApp</label><input type="tel" id="whatsapp" required placeholder="Ex.: 11999999999"></div>
         <div class="form-group"><label for="email">E-mail</label><input type="email" id="email" required placeholder="Ex.: joao@email.com"></div>
         <div class="termo-box"><input type="checkbox" id="termo" required><label for="termo">Consinto em fornecer meus dados para o mapeamento de interesse em projetos aeroespaciais e tecnologias de monitoramento ambiental.</label></div>
-        <button type="submit" id="btn-submit" class="btn-enviar">Validar e Acessar Mapa</button>
-        <div id="erro-api" class="erro-api" role="alert"></div>
+        <button type="submit" id="btn-submit" class="btn-enviar">Cadastrar e acessar mapa</button>
       </form>
+      <div id="erro-api" class="erro-api" role="alert"></div>
+      <div id="sucesso-api" class="sucesso-api"></div>
     </div>
   </div>
 
   <div id="monitor-container">
     <div class="kpi-bar">
-      <div class="kpi-card"><h3>Total de Focos Ativos</h3><div class="valor" id="kpi-total">0</div><div class="detalhe">Detectados em território nacional nas últimas 24h</div></div>
+      <div class="kpi-card"><h3>Total de Focos Ativos</h3><div class="valor" id="kpi-total">0</div><div class="detalhe">Detectados em território nacional nas últimas 24h</div><div class="detalhe" id="kpi-atualizacao">Última atualização: aguardando...</div></div>
       <div class="kpi-card"><h3>Região Mais Afetada</h3><div class="valor" id="kpi-regiao">-</div><div class="detalhe" id="kpi-regiao-sub">Aguardando processamento...</div></div>
       <div class="kpi-card"><h3>Intensidade Média (FRP)</h3><div class="valor" id="kpi-frp">0 MW</div><div class="detalhe" id="kpi-frp-status">Poder radiativo do fogo medido</div></div>
     </div>
@@ -64,20 +80,26 @@
     <div id="map-status" class="map-status"></div>
   </div>
 
-  <!-- O CSS e o JS precisam ser da mesma versão do Leaflet. -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwwg4nHVV4BAbs3SFeF6utIdtHe4PnjHsp9c4cozWLE3sjlRIpMsecTd1-1O6hEyib9Cw/exec';
-    let map;
-    let markersLayer;
+    let map, markersLayer;
+
+    function alternarAba(entrar) {
+      document.getElementById('form-entrar').style.display = entrar ? 'block' : 'none';
+      document.getElementById('form-cadastro').style.display = entrar ? 'none' : 'block';
+      document.getElementById('aba-entrar').classList.toggle('ativa', entrar);
+      document.getElementById('aba-cadastrar').classList.toggle('ativa', !entrar);
+      document.getElementById('erro-api').textContent = '';
+      document.getElementById('sucesso-api').textContent = '';
+    }
+    document.getElementById('aba-entrar').onclick = () => alternarAba(true);
+    document.getElementById('aba-cadastrar').onclick = () => alternarAba(false);
 
     function inicializarMapa() {
       if (map) return;
-      map = L.map('map', { preferCanvas: true }).setView([-14.2350, -51.9253], 4);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
+      map = L.map('map', { preferCanvas:true }).setView([-14.2350, -51.9253], 4);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:18, attribution:'© OpenStreetMap contributors' }).addTo(map);
       markersLayer = L.layerGroup().addTo(map);
     }
 
@@ -87,113 +109,92 @@
       if (resposta && Array.isArray(resposta.dados)) return resposta.dados;
       return [];
     }
-
+    function chavesNormalizadas(objeto) {
+      const saida = {};
+      Object.keys(objeto || {}).forEach(k => { saida[String(k).normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase()] = objeto[k]; });
+      return saida;
+    }
     function numeroFoco(foco, ...chaves) {
+      const normalizado = chavesNormalizadas(foco);
       for (const chave of chaves) {
-        const valor = Number.parseFloat(String(foco?.[chave] ?? '').replace(',', '.'));
+        const valor = Number.parseFloat(String(normalizado[chave.toLowerCase()] ?? '').replace(',', '.'));
         if (Number.isFinite(valor)) return valor;
       }
       return null;
     }
-
-    function processarDadosEMapa(focos) {
+    function textoFoco(foco, ...chaves) {
+      const n = chavesNormalizadas(foco);
+      for (const chave of chaves) if (n[chave.toLowerCase()] !== undefined) return n[chave.toLowerCase()];
+      return 'N/A';
+    }
+    function processarDadosEMapa(focos, atualizadoEm) {
       const regioes = { Norte:0, Nordeste:0, 'Centro-Oeste':0, Sudeste:0, Sul:0 };
-      let somaFrp = 0;
-      let totalComFrp = 0;
+      let somaFrp = 0, totalComFrp = 0, totalValidos = 0;
       const fogoIcone = L.divIcon({ html:'🔥', className:'fogo-marcador', iconSize:[22,22], iconAnchor:[11,11] });
       markersLayer.clearLayers();
-
       focos.forEach(foco => {
-        const lat = numeroFoco(foco, 'latitude', 'lat', 'LATITUDE', 'LAT');
-        const lon = numeroFoco(foco, 'longitude', 'lon', 'lng', 'LONGITUDE', 'LON');
-        const frp = numeroFoco(foco, 'frp', 'FRP') ?? 0;
+        const lat = numeroFoco(foco, 'latitude','lat');
+        const lon = numeroFoco(foco, 'longitude','lon','lng');
+        const frp = numeroFoco(foco, 'frp') ?? 0;
         if (frp > 0) { somaFrp += frp; totalComFrp++; }
-
-        if (lat !== null && lon !== null && lat >= -35 && lat <= 6 && lon >= -75 && lon <= -30) {
-          let regiao = 'Centro-Oeste';
-          if (lat > -5) regiao = 'Norte';
-          else if (lat > -16 && lon > -48) regiao = 'Nordeste';
-          else if (lat > -22) regiao = 'Sudeste';
-          else regiao = 'Sul';
-          regioes[regiao]++;
-
-          const horario = foco.acq_time ?? foco.horario ?? foco.ACQ_TIME ?? 'N/A';
-          L.marker([lat, lon], { icon:fogoIcone })
-            .addTo(markersLayer)
-            .bindPopup(`<b>Foco detectado por satélite</b><br>Latitude: ${lat.toFixed(4)}<br>Longitude: ${lon.toFixed(4)}<br>Intensidade: ${frp.toFixed(1)} MW<br>Horário GMT: ${horario}`);
-        }
+        if (lat === null || lon === null || lat < -35 || lat > 6 || lon < -75 || lon > -30) return;
+        totalValidos++;
+        let regiao = 'Centro-Oeste';
+        if (lat > -5) regiao = 'Norte'; else if (lat > -16 && lon > -48) regiao = 'Nordeste'; else if (lat > -22) regiao = 'Sudeste'; else regiao = 'Sul';
+        regioes[regiao]++;
+        const horario = textoFoco(foco, 'acq_time','horario');
+        L.marker([lat, lon], { icon:fogoIcone }).addTo(markersLayer).bindPopup(`<b>Foco detectado por satélite</b><br>Latitude: ${lat.toFixed(4)}<br>Longitude: ${lon.toFixed(4)}<br>Intensidade: ${frp.toFixed(1)} MW<br>Horário GMT: ${horario}`);
       });
-
-      const total = focos.length;
       const media = totalComFrp ? (somaFrp / totalComFrp).toFixed(1) : '0.0';
-      document.getElementById('kpi-total').textContent = total;
+      document.getElementById('kpi-total').textContent = totalValidos;
+      document.getElementById('kpi-atualizacao').textContent = atualizadoEm ? `Última atualização: ${new Date(atualizadoEm).toLocaleString('pt-BR')}` : 'Última atualização: não informada';
       document.getElementById('kpi-frp').textContent = `${media} MW`;
       document.getElementById('kpi-frp-status').textContent = Number(media) > 40 ? 'Status médio: crítico' : 'Status médio: moderado';
-
-      if (total) {
+      if (totalValidos) {
         const maisAfetada = Object.keys(regioes).reduce((a,b) => regioes[a] >= regioes[b] ? a : b);
         document.getElementById('kpi-regiao').textContent = maisAfetada;
         document.getElementById('kpi-regiao-sub').textContent = `${regioes[maisAfetada]} focos com coordenadas válidas`;
       } else {
         document.getElementById('kpi-regiao').textContent = 'Nenhum';
-        document.getElementById('kpi-regiao-sub').textContent = 'A API não retornou focos ativos.';
+        document.getElementById('kpi-regiao-sub').textContent = focos.length ? 'A API retornou dados sem coordenadas válidas.' : 'A API não retornou focos ativos.';
       }
-
-      if (markersLayer.getLayers().length) {
-        map.fitBounds(markersLayer.getBounds().pad(0.12), { maxZoom: 7 });
-      } else {
-        map.setView([-14.2350, -51.9253], 4);
-      }
+      if (markersLayer.getLayers().length) map.fitBounds(markersLayer.getBounds().pad(0.12), { maxZoom:7 }); else map.setView([-14.2350,-51.9253],4);
     }
-
-    async function carregarFocos() {
-      const resposta = await fetch(`${SCRIPT_URL}?acao=focos&t=${Date.now()}`, { cache:'no-store' });
-      if (!resposta.ok) throw new Error(`GET retornou HTTP ${resposta.status}`);
-      const texto = await resposta.text();
-      let json;
-      try { json = JSON.parse(texto); } catch { throw new Error('A API não retornou JSON válido.'); }
-      if (json.erro) throw new Error(json.erro);
-      return extrairFocos(json);
+    async function apiGet(params) {
+      const resposta = await fetch(`${SCRIPT_URL}?${new URLSearchParams({...params, t:Date.now()})}`, { cache:'no-store' });
+      if (!resposta.ok) throw new Error(`API retornou HTTP ${resposta.status}`);
+      const json = await resposta.json();
+      if (!json.sucesso) throw new Error(json.erro || 'A API recusou a operação.');
+      return json;
     }
+    async function abrirMonitor(email, senha) {
+      email = email || localStorage.getItem('monitor_email') || '';
+      senha = senha || localStorage.getItem('monitor_senha') || '';
+      if (email && senha) { localStorage.setItem('monitor_email', email); localStorage.setItem('monitor_senha', senha); }
+      const resposta = await apiGet({ acao:'focos', email:email, senha:senha });
+      const focos = extrairFocos(resposta);
+      document.getElementById('cadastro-container').style.display='none';
+      document.getElementById('monitor-container').style.display='flex';
+      inicializarMapa(); processarDadosEMapa(focos, resposta.atualizadoEm); requestAnimationFrame(() => map.invalidateSize(true));
+    }
+    function mostrarErro(error) { document.getElementById('erro-api').textContent = error.message || String(error); }
 
-    document.getElementById('form-cadastro').addEventListener('submit', async event => {
-      event.preventDefault();
-      const btn = document.getElementById('btn-submit');
-      const erro = document.getElementById('erro-api');
-      btn.disabled = true;
-      btn.textContent = 'Liberando mapa aeroespacial...';
-      erro.textContent = '';
-
-      const payload = {
-        nome: document.getElementById('nome').value.trim(),
-        profissao: document.getElementById('profissao').value.trim(),
-        idade: Number.parseInt(document.getElementById('idade').value, 10),
-        whatsapp: document.getElementById('whatsapp').value.trim(),
-        email: document.getElementById('email').value.trim(),
-        termo: document.getElementById('termo').checked
-      };
-
-      try {
-        // text/plain evita preflight CORS; o Apps Script lê e.postData.contents.
-        await fetch(SCRIPT_URL, {
-          method:'POST',
-          mode:'no-cors',
-          headers:{ 'Content-Type':'text/plain;charset=utf-8' },
-          body:JSON.stringify(payload)
-        });
-        const focos = await carregarFocos();
-        document.getElementById('cadastro-container').style.display = 'none';
-        document.getElementById('monitor-container').style.display = 'flex';
-        inicializarMapa();
-        processarDadosEMapa(focos);
-        requestAnimationFrame(() => map.invalidateSize(true));
-      } catch (error) {
-        console.error('Erro na comunicação com a API:', error);
-        erro.textContent = `Não foi possível carregar os dados: ${error.message}`;
-        btn.textContent = 'Tentar novamente';
-        btn.disabled = false;
-      }
+    document.getElementById('form-entrar').addEventListener('submit', async event => {
+      event.preventDefault(); const btn = document.getElementById('btn-login'); btn.disabled=true; btn.textContent='Validando...'; mostrarErro('');
+      try { const email=document.getElementById('email-login').value.trim(); const senha=document.getElementById('senha-login').value.trim().toUpperCase(); await apiGet({ acao:'entrar', email:email, senha:senha }); await abrirMonitor(email, senha); }
+      catch (e) { mostrarErro(e); btn.disabled=false; btn.textContent='Acessar mapa'; }
     });
+    document.getElementById('form-cadastro').addEventListener('submit', async event => {
+      event.preventDefault(); const btn=document.getElementById('btn-submit'); btn.disabled=true; btn.textContent='Cadastrando...'; mostrarErro(''); document.getElementById('sucesso-api').textContent='';
+      try {
+        const r = await apiGet({ acao:'cadastrar', nome:document.getElementById('nome').value.trim(), profissao:document.getElementById('profissao').value.trim(), idade:document.getElementById('idade').value, whatsapp:document.getElementById('whatsapp').value.trim(), email:document.getElementById('email').value.trim(), termo:'true' });
+        const senha = r.senha; const link = `${location.origin}${location.pathname}?senha=${encodeURIComponent(senha)}&email=${encodeURIComponent(document.getElementById('email').value.trim())}`;
+        document.getElementById('sucesso-api').innerHTML = `<div class="senha-gerada">Cadastro realizado. Sua senha de acesso é:<strong>${senha}</strong>Também enviamos o link para seu e-mail.<br><a href="${link}">Acessar agora</a></div>`;
+        const email=document.getElementById('email').value.trim(); document.getElementById('email-login').value=email; document.getElementById('senha-login').value=senha; alternarAba(true); await abrirMonitor(email, senha);
+      } catch (e) { mostrarErro(e); btn.disabled=false; btn.textContent='Cadastrar e acessar mapa'; }
+    });
+    const params = new URLSearchParams(location.search);
+    if (params.get('senha')) { alternarAba(true); document.getElementById('email-login').value=params.get('email') || ''; document.getElementById('senha-login').value=params.get('senha').toUpperCase(); }
   </script>
 </body>
 </html>
