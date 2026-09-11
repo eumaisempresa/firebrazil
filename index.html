@@ -1,216 +1,154 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor de Incêndios Aeroespaciais - Brasil</title>
-    <!-- Leaflet Map CSS -->
-    <link rel="stylesheet" href="https://unpkg.com" />
-    <style>
-        :root {
-            --primary: #e65100;
-            --dark: #212121;
-            --light: #f5f5f5;
-        }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--light); color: var(--dark); }
-        
-        /* Tela de Cadastro */
-        #cadastro-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
-        .card-cadastro { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
-        .card-cadastro h2 { margin-top: 0; color: var(--primary); text-align: center; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        .termo-box { display: flex; align-items: flex-start; gap: 10px; margin: 20px 0; font-size: 12px; color: #666; }
-        .termo-box input { margin-top: 3px; cursor: pointer; }
-        .btn-enviar { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; transition: background 0.3s; }
-        .btn-enviar:hover { background: #b33900; }
-        .btn-enviar:disabled { background: #ccc; cursor: not-allowed; }
-
-        /* Dashboard do Monitor (Inicialmente Oculto) */
-        #monitor-container { display: none; flex-direction: column; height: 100vh; }
-        
-        /* Barra de Indicadores (KPIs) */
-        .kpi-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; padding: 15px; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.05); z-index: 1000; }
-        .kpi-card { background: #fff3e0; border-left: 5px solid var(--primary); padding: 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .kpi-card h3 { margin: 0 0 5px 0; font-size: 13px; text-transform: uppercase; color: #666; }
-        .kpi-card .valor { font-size: 24px; font-weight: bold; color: var(--dark); }
-        .kpi-card .detalhe { font-size: 12px; color: #888; margin-top: 4px; }
-
-        /* Área Visual do Mapa */
-        #map { flex-grow: 1; width: 100%; }
-        .fogo-marcador { font-size: 22px; text-align: center; line-height: 22px; cursor: pointer; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitor de Incêndios Aeroespaciais - Brasil</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3h8h7d1d0C4l5O1u1l8p9rQw1fJg=" crossorigin="" />
+  <style>
+    :root { --primary:#e65100; --dark:#212121; --light:#f5f5f5; }
+    * { box-sizing:border-box; }
+    body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; margin:0; background:var(--light); color:var(--dark); }
+    #cadastro-container { display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px; }
+    .card-cadastro { background:#fff; padding:30px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,.1); width:100%; max-width:450px; }
+    .card-cadastro h2 { margin-top:0; color:var(--primary); text-align:center; }
+    .form-group { margin-bottom:15px; }
+    .form-group label { display:block; margin-bottom:5px; font-weight:600; font-size:14px; }
+    .form-group input { width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; }
+    .termo-box { display:flex; align-items:flex-start; gap:10px; margin:20px 0; font-size:12px; color:#666; }
+    .termo-box input { margin-top:3px; cursor:pointer; }
+    .btn-enviar { width:100%; padding:12px; background:var(--primary); color:#fff; border:0; border-radius:6px; font-weight:bold; cursor:pointer; font-size:16px; }
+    .btn-enviar:hover { background:#b33900; }
+    .btn-enviar:disabled { background:#ccc; cursor:not-allowed; }
+    #monitor-container { display:none; flex-direction:column; height:100vh; }
+    .kpi-bar { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:15px; padding:15px; background:#fff; box-shadow:0 2px 10px rgba(0,0,0,.05); z-index:1000; }
+    .kpi-card { background:#fff3e0; border-left:5px solid var(--primary); padding:15px; border-radius:6px; box-shadow:0 2px 5px rgba(0,0,0,.05); }
+    .kpi-card h3 { margin:0 0 5px; font-size:13px; text-transform:uppercase; color:#666; }
+    .kpi-card .valor { font-size:24px; font-weight:bold; }
+    .kpi-card .detalhe { font-size:12px; color:#888; margin-top:4px; }
+    #map { flex:1; width:100%; min-height:300px; }
+    .fogo-marcador { font-size:22px; text-align:center; line-height:22px; cursor:pointer; }
+    .erro-api { color:#b00020; font-size:13px; margin-top:12px; text-align:center; }
+  </style>
 </head>
 <body>
-
-    <!-- 1. TELA DE ACESSO E CADASTRO -->
-    <div id="cadastro-container">
-        <div class="card-cadastro">
-            <h2>Acesso ao Monitor</h2>
-            <p style="text-align: center; font-size: 13px; color: #666; margin-bottom: 20px;">Preencha seus dados de interesse para liberar o mapa com dados de satélite em tempo real.</p>
-            <form id="form-cadastro">
-                <div class="form-group">
-                    <label>Nome Completo</label>
-                    <input type="text" id="nome" required placeholder="Ex: João Silva">
-                </div>
-                <div class="form-group">
-                    <label>Profissão</label>
-                    <input type="text" id="profissao" required placeholder="Ex: Estudante, Engenheiro">
-                </div>
-                <div class="form-group">
-                    <label>Idade</label>
-                    <input type="number" id="idade" required min="1" max="120" placeholder="Ex: 24">
-                </div>
-                <div class="form-group">
-                    <label>WhatsApp</label>
-                    <input type="tel" id="whatsapp" required placeholder="Ex: 11999999999">
-                </div>
-                <div class="form-group">
-                    <label>E-mail</label>
-                    <input type="email" id="email" required placeholder="Ex: joao@email.com">
-                </div>
-                <div class="termo-box">
-                    <input type="checkbox" id="termo" required>
-                    <label for="termo">Consinto em fornecer meus dados para o mapeamento discreto de interesse em projetos aeroespaciais e tecnologias de monitoramento ambiental.</label>
-                </div>
-                <button type="submit" id="btn-submit" class="btn-enviar">Validar e Acessar Mapa</button>
-            </form>
-        </div>
+  <div id="cadastro-container">
+    <div class="card-cadastro">
+      <h2>Acesso ao Monitor</h2>
+      <p style="text-align:center;font-size:13px;color:#666;margin-bottom:20px">Preencha seus dados de interesse para liberar o mapa com dados de satélite.</p>
+      <form id="form-cadastro">
+        <div class="form-group"><label for="nome">Nome Completo</label><input type="text" id="nome" required placeholder="Ex.: João Silva"></div>
+        <div class="form-group"><label for="profissao">Profissão</label><input type="text" id="profissao" required placeholder="Ex.: Estudante, Engenheiro"></div>
+        <div class="form-group"><label for="idade">Idade</label><input type="number" id="idade" required min="1" max="120" placeholder="Ex.: 24"></div>
+        <div class="form-group"><label for="whatsapp">WhatsApp</label><input type="tel" id="whatsapp" required placeholder="Ex.: 11999999999"></div>
+        <div class="form-group"><label for="email">E-mail</label><input type="email" id="email" required placeholder="Ex.: joao@email.com"></div>
+        <div class="termo-box"><input type="checkbox" id="termo" required><label for="termo">Consinto em fornecer meus dados para o mapeamento de interesse em projetos aeroespaciais e tecnologias de monitoramento ambiental.</label></div>
+        <button type="submit" id="btn-submit" class="btn-enviar">Validar e Acessar Mapa</button>
+        <div id="erro-api" class="erro-api" role="alert"></div>
+      </form>
     </div>
+  </div>
 
-    <!-- 2. PAINEL DO MAPA E INDICADORES (KPIs) -->
-    <div id="monitor-container">
-        <div class="kpi-bar">
-            <div class="kpi-card">
-                <h3>Total de Focos Ativos</h3>
-                <div class="valor" id="kpi-total">0</div>
-                <div class="detalhe">Detectados em território nacional nas últimas 24h</div>
-            </div>
-            <div class="kpi-card">
-                <h3>Região Mais Afetada</h3>
-                <div class="valor" id="kpi-regiao">-</div>
-                <div class="detalhe" id="kpi-regiao-sub">Aguardando processamento...</div>
-            </div>
-            <div class="kpi-card">
-                <h3>Intensidade Média (FRP)</h3>
-                <div class="valor" id="kpi-frp">0 MW</div>
-                <div class="detalhe" id="kpi-frp-status">Poder radiativo do fogo medido</div>
-            </div>
-        </div>
-        <div id="map"></div>
+  <div id="monitor-container">
+    <div class="kpi-bar">
+      <div class="kpi-card"><h3>Total de Focos Ativos</h3><div class="valor" id="kpi-total">0</div><div class="detalhe">Detectados em território nacional nas últimas 24h</div></div>
+      <div class="kpi-card"><h3>Região Mais Afetada</h3><div class="valor" id="kpi-regiao">-</div><div class="detalhe" id="kpi-regiao-sub">Aguardando processamento...</div></div>
+      <div class="kpi-card"><h3>Intensidade Média (FRP)</h3><div class="valor" id="kpi-frp">0 MW</div><div class="detalhe" id="kpi-frp-status">Poder radiativo do fogo medido</div></div>
     </div>
+    <div id="map"></div>
+  </div>
 
-    <!-- Leaflet Map JS -->
-    <script src="https://unpkg.com"></script>
-    <script>
-        // URL da sua implantação do Google Apps Script fornecida
-        const SCRIPT_URL = "https://google.com";
-        let map;
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwwg4nHVV4BAbs3SFeF6utIdtHe4PnjHsp9c4cozWLE3sjlRIpMsecTd1-1O6hEyib9Cw/exec';
+    let map;
 
-        // Inicializa o Mapa focado no Brasil
-        function inicializarMapa() {
-            map = L.map('map').setView([-14.2350, -51.9253], 4);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
-            }).addTo(map);
+    function inicializarMapa() {
+      if (map) return;
+      map = L.map('map').setView([-14.2350, -51.9253], 4);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap contributors' }).addTo(map);
+    }
+
+    function extrairFocos(resposta) {
+      if (Array.isArray(resposta)) return resposta;
+      if (resposta && Array.isArray(resposta.focos)) return resposta.focos;
+      if (resposta && Array.isArray(resposta.dados)) return resposta.dados;
+      return [];
+    }
+
+    function processarDadosEMapa(focos) {
+      const regioes = { Norte:0, Nordeste:0, 'Centro-Oeste':0, Sudeste:0, Sul:0 };
+      let somaFrp = 0;
+      const fogoIcone = L.divIcon({ html:'🔥', className:'fogo-marcador', iconSize:[22,22] });
+
+      focos.forEach(foco => {
+        const lat = Number.parseFloat(foco.latitude ?? foco.lat);
+        const lon = Number.parseFloat(foco.longitude ?? foco.lon ?? foco.lng);
+        const frp = Number.parseFloat(foco.frp) || 0;
+        somaFrp += frp;
+        let regiao = 'Centro-Oeste';
+        if (lat > -5) regiao = 'Norte';
+        else if (lat <= -5 && lat > -16 && lon > -48) regiao = 'Nordeste';
+        else if (lat <= -16 && lat > -22) regiao = 'Sudeste';
+        else if (lat <= -22) regiao = 'Sul';
+        regioes[regiao]++;
+        if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
+          L.marker([lat, lon], { icon:fogoIcone }).addTo(map).bindPopup(`<b>Foco detectado por satélite</b><br>Intensidade: ${frp} MW<br>Horário GMT: ${foco.acq_time || foco.horario || 'N/A'}`);
         }
+      });
 
-        // Processa as coordenadas e renderiza as estatísticas nos cartões (KPIs)
-        function processarDadosEMapa(focos) {
-            let totalFocos = focos.length;
-            let somaFrp = 0;
-            let regioes = { 'Norte': 0, 'Nordeste': 0, 'Centro-Oeste': 0, 'Sudeste': 0, 'Sul': 0 };
+      const total = focos.length;
+      const media = total ? (somaFrp / total).toFixed(1) : '0';
+      document.getElementById('kpi-total').textContent = total;
+      document.getElementById('kpi-frp').textContent = `${media} MW`;
+      document.getElementById('kpi-frp-status').textContent = Number(media) > 40 ? 'Status médio: crítico' : 'Status médio: moderado';
+      if (total) {
+        const maisAfetada = Object.keys(regioes).reduce((a,b) => regioes[a] >= regioes[b] ? a : b);
+        document.getElementById('kpi-regiao').textContent = maisAfetada;
+        document.getElementById('kpi-regiao-sub').textContent = `${regioes[maisAfetada]} focos ativos encontrados`;
+      } else {
+        document.getElementById('kpi-regiao').textContent = 'Nenhum';
+        document.getElementById('kpi-regiao-sub').textContent = 'A API não retornou focos ativos.';
+      }
+    }
 
-            // Criação visual do marcador em formato de fogo
-            const fogoIcone = L.divIcon({
-                html: '🔥',
-                className: 'fogo-marcador',
-                iconSize: [22, 22]
-            });
+    async function carregarFocos() {
+      const resposta = await fetch(SCRIPT_URL, { method:'GET', cache:'no-store' });
+      if (!resposta.ok) throw new Error(`GET retornou HTTP ${resposta.status}`);
+      return extrairFocos(await resposta.json());
+    }
 
-            focos.forEach(foco => {
-                const lat = parseFloat(foco.latitude);
-                const lon = parseFloat(foco.longitude);
-                const frp = parseFloat(foco.frp) || 0;
-                somaFrp += frp;
-
-                // Divisão geográfica simplificada por aproximação de faixas de coordenadas brasileiras
-                let regiao = 'Centro-Oeste'; 
-                if (lat > -5) regiao = 'Norte';
-                else if (lat <= -5 && lat > -16 && lon > -48) regiao = 'Nordeste';
-                else if (lat <= -16 && lat > -22) regiao = 'Sudeste';
-                else if (lat <= -22) regiao = 'Sul';
-                
-                regioes[regiao]++;
-
-                // Adiciona o marcador geográfico caso as coordenadas existam na linha
-                if (!isNaN(lat) && !isNaN(lon)) {
-                    L.marker([lat, lon], {icon: fogoIcone})
-                     .addTo(map)
-                     .bindPopup(`<b>Foco Detectado por Satélite</b><br>Intensidade: ${frp} MW<br>Horário GMT: ${foco.acq_time || 'N/A'}`);
-                }
-            });
-
-            // Atualiza os Textos dos Cards de KPI na tela
-            document.getElementById('kpi-total').innerText = totalFocos;
-            
-            let mediaFrp = totalFocos > 0 ? (somaFrp / totalFocos).toFixed(1) : 0;
-            document.getElementById('kpi-frp').innerText = `${mediaFrp} MW`;
-            document.getElementById('kpi-frp-status').innerText = mediaFrp > 40 ? "Status Médio: Crítico" : "Status Médio: Moderado";
-
-            if (totalFocos > 0) {
-                let maisAfetada = Object.keys(regioes).reduce((a, b) => regioes[a] > regioes[b] ? a : b);
-                document.getElementById('kpi-regiao').innerText = maisAfetada;
-                document.getElementById('kpi-regiao-sub').innerText = `${regioes[maisAfetada]} focos ativos encontrados`;
-            } else {
-                document.getElementById('kpi-regiao').innerText = "Nenhum";
-                document.getElementById('kpi-regiao-sub').innerText = "Nenhum foco listado nas últimas 24h";
-            }
-        }
-
-        // Intercepta e gerencia o clique do formulário
-        document.getElementById('form-cadastro').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const btn = document.getElementById('btn-submit');
-            btn.innerText = "Liberando mapa aeroespacial...";
-            btn.disabled = true;
-
-            const payload = {
-                nome: document.getElementById('nome').value,
-                profissao: document.getElementById('profissao').value,
-                idade: parseInt(document.getElementById('idade').value),
-                whatsapp: document.getElementById('whatsapp').value,
-                email: document.getElementById('email').value,
-                termo: document.getElementById('termo').checked
-            };
-
-            // ETAPA A: Envia os dados cadastrais via POST (Modo no-cors garante que a gravação ocorra sem travar a tela)
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-        .then(() => {
-            // ETAPA B: Imediatamente após gravar, faz uma chamada de leitura via GET para coletar a lista de focos
-            return fetch(SCRIPT_URL);
-        })
-        .then(res => res.json())
-        .then(dadosFocos => {
-            // Transiciona a interface visual ocultando o formulário e ativando a dashboard
-            document.getElementById('cadastro-container').style.display = 'none';
-            document.getElementById('monitor-container').style.display = 'flex';
-            
-            // Desenha o mapa e processa as informações meteorológicas
-            inicializarMapa();
-            processarDadosEMapa(dadosFocos);
-        })
-        .catch(error => {
-            console.error("Erro na comunicação de dados:", error);
-            alert("Erro ao carregar o monitor aeroespacial. Verifique se publicou uma 'Nova Versão' da implantação do Apps Script.");
-            btn.innerText = "Validar e Acessar Mapa";
-            btn.disabled = false;
-        });
+    document.getElementById('form-cadastro').addEventListener('submit', async event => {
+      event.preventDefault();
+      const btn = document.getElementById('btn-submit');
+      const erro = document.getElementById('erro-api');
+      btn.disabled = true;
+      btn.textContent = 'Liberando mapa aeroespacial...';
+      erro.textContent = '';
+      const payload = {
+        nome: document.getElementById('nome').value.trim(),
+        profissao: document.getElementById('profissao').value.trim(),
+        idade: Number.parseInt(document.getElementById('idade').value, 10),
+        whatsapp: document.getElementById('whatsapp').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        termo: document.getElementById('termo').checked
+      };
+      try {
+        // text/plain evita preflight CORS; no Apps Script, leia e.postData.contents.
+        await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body:JSON.stringify(payload) });
+        const focos = await carregarFocos();
+        document.getElementById('cadastro-container').style.display = 'none';
+        document.getElementById('monitor-container').style.display = 'flex';
+        inicializarMapa();
+        processarDadosEMapa(focos);
+        setTimeout(() => map.invalidateSize(), 100);
+      } catch (error) {
+        console.error('Erro na comunicação com a API:', error);
+        erro.textContent = 'Não foi possível carregar os dados. Verifique a implantação e o retorno do método GET do Apps Script.';
+        btn.textContent = 'Tentar novamente';
+        btn.disabled = false;
+      }
     });
+  </script>
+</body>
+</html>
