@@ -4,13 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitor MapBiomas Alerta</title>
-
-    <!-- Leaflet CSS & MarkerCluster CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-
-    <!-- Google Fonts & FontAwesome Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
@@ -23,363 +19,78 @@
             --text-muted: #9ba8b5;
             --accent-green: #2ecc71;
             --accent-alert: #e74c3c;
-            --accent-warning: #f39c12;
             --border-color: #2c3e50;
-            --chat-width: 360px;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', sans-serif;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-primary); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
 
-        body {
-            background-color: var(--bg-primary);
-            color: var(--text-main);
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-            position: relative;
-        }
-
-        /* TELA DE CADASTRO / LOGIN (OVERLAY) */
         #auth-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(18, 24, 27, 0.95);
-            backdrop-filter: blur(8px);
-            z-index: 5000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(18, 24, 27, 0.95); backdrop-filter: blur(8px);
+            z-index: 5000; display: flex; justify-content: center; align-items: center;
         }
 
         .auth-card {
-            background-color: var(--bg-surface);
-            border: 1px solid var(--border-color);
-            padding: 30px;
-            border-radius: 12px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            text-align: center;
+            background-color: var(--bg-surface); border: 1px solid var(--border-color);
+            padding: 30px; border-radius: 12px; width: 100%; max-width: 400px; text-align: center;
         }
 
-        .auth-card h2 {
-            color: var(--accent-green);
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .auth-card p {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-        }
-
-        .auth-form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .input-group {
-            text-align: left;
-        }
-
-        .input-group label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 10px 12px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            border-radius: 6px;
-            outline: none;
+        .auth-card h2 { color: var(--accent-green); margin-bottom: 8px; }
+        .auth-card p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; }
+        .auth-form { display: flex; flex-direction: column; gap: 15px; text-align: left; }
+        .auth-form label { font-size: 0.8rem; color: var(--text-muted); }
+        .auth-form input {
+            width: 100%; padding: 10px; background: var(--bg-card);
+            border: 1px solid var(--border-color); color: #fff; border-radius: 6px; outline: none;
         }
 
         .btn-submit {
-            background: var(--accent-green);
-            color: #000;
-            border: none;
-            padding: 12px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            margin-top: 10px;
+            background: var(--accent-green); color: #000; border: none;
+            padding: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 10px;
         }
 
-        .btn-submit:hover {
-            opacity: 0.9;
-        }
-
-        /* Lateral - Sidebar Dashboard */
-        #sidebar {
-            width: 380px;
-            background-color: var(--bg-surface);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            z-index: 1000;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
-        }
-
-        .header {
-            padding: 20px;
-            background-color: var(--bg-card);
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .header h1 {
-            font-size: 1.25rem;
-            color: var(--accent-green);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .header p {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-top: 5px;
-        }
-
-        .metrics-container {
-            padding: 15px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .card-metric {
-            background-color: var(--bg-card);
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
-
-        .card-metric span {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-
-        .card-metric h2 {
-            font-size: 1.1rem;
-            color: var(--text-main);
-            margin-top: 4px;
-        }
-
-        .card-metric.full {
-            grid-column: span 2;
-        }
-
-        .data-list-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-        }
-
-        .alert-item {
-            background-color: var(--bg-card);
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            border-left: 4px solid var(--accent-alert);
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: transform 0.1s ease;
-        }
-
-        .alert-item:hover {
-            transform: translateX(4px);
-        }
-
-        .alert-item header {
-            display: flex;
-            justify-content: space-between;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .alert-item p {
-            color: var(--text-muted);
-        }
-
-        /* Área do Mapa */
-        #map-container {
-            flex: 1;
-            position: relative;
-        }
-
-        #map {
-            width: 100%;
-            height: 100%;
-        }
-
-        .dark-tiles .leaflet-tile-pane {
-            filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3);
-        }
-
-        /* Widget Flutuante de Chat - IA Gemini */
-        #chat-widget {
-            position: absolute;
-            bottom: 25px;
-            right: 25px;
-            z-index: 2000;
-        }
-
-        #chat-toggle {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background-color: var(--accent-green);
-            color: #fff;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.4rem;
-        }
-
-        #chat-box {
-            display: none;
-            width: var(--chat-width);
-            height: 480px;
-            background-color: var(--bg-surface);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-            flex-direction: column;
-            overflow: hidden;
-            position: absolute;
-            bottom: 70px;
-            right: 0;
-        }
-
-        .chat-header {
-            background-color: var(--bg-card);
-            padding: 12px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .chat-messages {
-            flex: 1;
-            padding: 12px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            font-size: 0.85rem;
-        }
-
-        .msg {
-            max-width: 85%;
-            padding: 8px 12px;
-            border-radius: 8px;
-            line-height: 1.4;
-        }
-
-        .msg.user {
-            background-color: var(--accent-green);
-            color: #000;
-            align-self: flex-end;
-        }
-
-        .msg.bot {
-            background-color: var(--bg-card);
-            color: var(--text-main);
-            align-self: flex-start;
-            border: 1px solid var(--border-color);
-        }
-
-        .chat-input-area {
-            padding: 10px;
-            background-color: var(--bg-card);
-            display: flex;
-            gap: 8px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .chat-input-area input {
-            flex: 1;
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            color: #fff;
-            padding: 8px 12px;
-            border-radius: 6px;
-            outline: none;
-        }
-
-        .chat-input-area button {
-            background: var(--accent-green);
-            border: none;
-            color: #000;
-            padding: 0 12px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        .loading-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(18, 24, 27, 0.85);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 3000;
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            text-align: center;
-            padding: 20px;
-        }
+        #sidebar { width: 380px; background-color: var(--bg-surface); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 1000; }
+        .header { padding: 20px; background-color: var(--bg-card); border-bottom: 1px solid var(--border-color); }
+        .header h1 { font-size: 1.25rem; color: var(--accent-green); }
+        .metrics-container { padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .card-metric { background-color: var(--bg-card); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .card-metric.full { grid-column: span 2; }
+        .card-metric span { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+        .card-metric h2 { font-size: 1.1rem; margin-top: 4px; }
+        .data-list-container { flex: 1; overflow-y: auto; padding: 15px; }
+        .alert-item { background-color: var(--bg-card); padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid var(--accent-alert); font-size: 0.85rem; cursor: pointer; }
+        
+        #map-container { flex: 1; position: relative; }
+        #map { width: 100%; height: 100%; }
+        .dark-tiles .leaflet-tile-pane { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3); }
     </style>
 </head>
 <body>
 
-    <!-- TELA DE CADASTRO/LOGIN -->
     <div id="auth-overlay">
         <div class="auth-card">
-            <h2><i class="fa-solid fa-tree"></i> MapBiomas</h2>
-            <p>Acesse ou cadastre-se para monitorar alertas</p>
+            <h2><i class="fa-solid fa-tree"></i> MapBiomas Alerta</h2>
+            <p>Cadastre-se para liberar os dados no painel</p>
             <form class="auth-form" onsubmit="handleAuth(event)">
-                <div class="input-group">
+                <div>
                     <label>Nome Completo</label>
                     <input type="text" id="auth-name" required placeholder="Seu nome">
                 </div>
-                <div class="input-group">
-                    <label>E-mail Corporativo/Pessoal</label>
+                <div>
+                    <label>E-mail</label>
                     <input type="email" id="auth-email" required placeholder="seu@email.com">
                 </div>
-                <button type="submit" class="btn-submit">Entrar no Dashboard</button>
+                <button type="submit" id="btn-auth" class="btn-submit">Entrar e Salvar</button>
             </form>
         </div>
     </div>
 
-    <!-- Sidebar Dashboard -->
     <div id="sidebar">
         <div class="header">
             <h1><i class="fa-solid fa-tree"></i> MapBiomas Alerta</h1>
             <p id="user-display">Usuário: Não Conectado</p>
         </div>
-
         <div class="metrics-container">
             <div class="card-metric full">
                 <span>Área Total Desmatada</span>
@@ -394,134 +105,61 @@
                 <h2 id="metric-top-biome">-</h2>
             </div>
         </div>
-
-        <div class="data-list-container" id="alerts-list">
-            <!-- Renderizado via JS -->
-        </div>
+        <div class="data-list-container" id="alerts-list"></div>
     </div>
 
-    <!-- Mapa -->
     <div id="map-container" class="dark-tiles">
         <div id="map"></div>
-
-        <!-- Agente IA -->
-        <div id="chat-widget">
-            <div id="chat-box">
-                <div class="chat-header">
-                    <h3><i class="fa-solid fa-robot" style="color: var(--accent-green);"></i> Agente Ambiental</h3>
-                    <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="toggleChat()"></i>
-                </div>
-                <div class="chat-messages" id="chat-messages">
-                    <div class="msg bot">Olá! Sou o assistente de inteligência territorial. Como posso ajudar?</div>
-                </div>
-                <div class="chat-input-area">
-                    <input type="text" id="chat-input" placeholder="Pergunte sobre os alertas..." onkeydown="if(event.key==='Enter') sendQuestion()">
-                    <button onclick="sendQuestion()"><i class="fa-solid fa-paper-plane"></i></button>
-                </div>
-            </div>
-            <button id="chat-toggle" onclick="toggleChat()">
-                <i class="fa-solid fa-comments"></i>
-            </button>
-        </div>
     </div>
 
-    <div id="loading" class="loading-overlay">Sincronizando dados do MapBiomas...</div>
-
-    <!-- Scripts Externos -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.js"></script>
 
     <script>
-        // CONFIGURAÇÕES
-        const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyDST7GL70bhQE2aqoIocZoZb-CXqpffafXX2fkVj5Mb_lLxRMDEwuG9HGMJxh1YoJk/exec'; 
-
+        const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyDST7GL70bhQE2aqoIocZoZb-CXqpffafXX2fkVj5Mb_lLxRMDEwuG9HGMJxh1YoJk/exec';
         let map, markersCluster;
-        let mapAlertsData = [];
 
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
-            // Verifica se o usuário já fez cadastro antes
-            const savedUser = localStorage.getItem('mapbiomas_user');
-            if (savedUser) {
-                document.getElementById('auth-overlay').style.display = 'none';
-                document.getElementById('user-display').innerText = `Usuário: ${savedUser}`;
-                fetchAlertsData();
-            }
         });
-
-        // Função de Cadastro/Login
-        function handleAuth(e) {
-            e.preventDefault();
-            const name = document.getElementById('auth-name').value;
-            const email = document.getElementById('auth-email').value;
-
-            if (name && email) {
-                localStorage.setItem('mapbiomas_user', name);
-                document.getElementById('auth-overlay').style.display = 'none';
-                document.getElementById('user-display').innerText = `Usuário: ${name}`;
-                fetchAlertsData();
-            }
-        }
 
         function initMap() {
             map = L.map('map', { zoomControl: false }).setView([-14.2350, -51.9253], 4);
-            L.control.zoom({ position: 'topright' }).addTo(map);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap | MapBiomas',
-                maxZoom: 19
-            }).addTo(map);
-
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
             markersCluster = L.markerClusterGroup({ chunkedLoading: true });
             map.addLayer(markersCluster);
         }
 
-        // Busca de Dados com tratamento de CORS / Redirecionamento
-        async function fetchAlertsData() {
-            const loading = document.getElementById('loading');
-            loading.style.display = 'flex';
+        async function handleAuth(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-auth');
+            btn.innerText = 'Salvando na planilha...';
+
+            const nome = document.getElementById('auth-name').value;
+            const email = document.getElementById('auth-email').value;
 
             try {
-                // Adicionamos 'redirect: follow' exigido pela API do Apps Script
-                const response = await fetch(`${GAS_ENDPOINT}?acao=buscarAlertas`, {
+                // Envia para o Apps Script gravar no Sheets
+                const response = await fetch(`${GAS_ENDPOINT}?acao=cadastrar&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&termo=true`, {
                     method: 'GET',
                     redirect: 'follow'
                 });
-
-                if (!response.ok) throw new Error('Erro ao conectar com a API');
-
-                const result = await response.json();
-                mapAlertsData = Array.isArray(result) ? result : (result.data || []);
-
-                renderDashboard(mapAlertsData);
-                loading.style.display = 'none';
-            } catch (error) {
-                console.error('Erro de Conexão:', error);
                 
-                // Exibe alerta informativo detalhado
-                loading.innerHTML = `
-                    <div style="background: var(--bg-surface); padding: 20px; border-radius: 8px; border: 1px solid var(--accent-alert);">
-                        <h3 style="color: var(--accent-alert); margin-bottom: 8px;">Erro na Conexão com o Google Apps Script</h3>
-                        <p style="margin-bottom: 15px;">Certifique-se de configurar a implantação no Apps Script com:</p>
-                        <ul style="text-align: left; font-size: 0.8rem; margin-bottom: 15px; padding-left: 20px;">
-                            <li><b>Executar como:</b> Eu (Seu e-mail)</li>
-                            <li><b>Quem tem acesso:</b> Qualquer pessoa (Anyone)</li>
-                        </ul>
-                        <button onclick="loadMockData()" class="btn-submit" style="margin-top:0;">Carregar Dados de Exemplo</button>
-                    </div>
-                `;
+                const res = await response.json();
+                
+                if (res.sucesso) {
+                    document.getElementById('auth-overlay').style.display = 'none';
+                    document.getElementById('user-display').innerText = `Usuário: ${nome}`;
+                    renderDashboard(res.dados || []);
+                } else {
+                    alert('Erro ao registrar: ' + res.erro);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Falha na comunicação com o servidor.');
+            } finally {
+                btn.innerText = 'Entrar e Salvar';
             }
-        }
-
-        // Dados de Contingência (Caso o Script do Google falhe na conexão)
-        function loadMockData() {
-            document.getElementById('loading').style.display = 'none';
-            mapAlertsData = [
-                { id: "ALT-001", area_ha: 145.2, municipio: "Altamira", estado: "PA", bioma: "Amazônia", latitude: -3.2033, longitude: -52.2064 },
-                { id: "ALT-002", area_ha: 88.5, municipio: "Formosa do Rio Preto", estado: "BA", bioma: "Cerrado", latitude: -11.0483, longitude: -45.1931 },
-                { id: "ALT-003", area_ha: 210.0, municipio: "Corumbá", estado: "MS", bioma: "Pantanal", latitude: -19.0072, longitude: -57.6538 }
-            ];
-            renderDashboard(mapAlertsData);
         }
 
         function renderDashboard(alerts) {
@@ -529,25 +167,25 @@
             listElement.innerHTML = '';
             markersCluster.clearLayers();
 
+            if (!alerts || alerts.length === 0) {
+                listElement.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 20px;">Nenhum alerta salvo na planilha. Execute a função buscarDadosMapBiomas no Apps Script.</p>';
+                return;
+            }
+
             let totalArea = 0;
             let biomesCount = {};
 
             alerts.forEach(alert => {
                 const area = parseFloat(alert.area_ha || alert.area || 0);
                 totalArea += area;
-
                 const biome = alert.bioma || alert.biome || 'Outros';
                 biomesCount[biome] = (biomesCount[biome] || 0) + 1;
 
                 const item = document.createElement('div');
                 item.className = 'alert-item';
                 item.innerHTML = `
-                    <header>
-                        <span>Código: ${alert.codigo || alert.id || 'N/A'}</span>
-                        <span style="color: var(--accent-alert);">${area.toFixed(2)} ha</span>
-                    </header>
+                    <header><b>Alerta: ${alert.codigo || alert.id}</b> - <span style="color: var(--accent-alert);">${area.toFixed(2)} ha</span></header>
                     <p><i class="fa-solid fa-location-dot"></i> ${alert.municipio || 'N/I'} - ${alert.estado || 'UF'}</p>
-                    <p><i class="fa-solid fa-leaf"></i> Bioma: ${biome}</p>
                 `;
 
                 const lat = parseFloat(alert.latitude || alert.lat);
@@ -555,80 +193,14 @@
 
                 if (!isNaN(lat) && !isNaN(lng)) {
                     item.onclick = () => map.setView([lat, lng], 12);
-                    
-                    const marker = L.circleMarker([lat, lng], {
-                        radius: Math.min(Math.max(area / 10, 6), 16),
-                        fillColor: '#e74c3c',
-                        color: '#fff',
-                        weight: 1,
-                        fillOpacity: 0.8
-                    }).bindPopup(`
-                        <strong>Alerta #${alert.codigo || alert.id || 'N/A'}</strong><br>
-                        <b>Área:</b> ${area.toFixed(2)} ha<br>
-                        <b>Local:</b> ${alert.municipio || 'N/I'}/${alert.estado || 'UF'}<br>
-                        <b>Bioma:</b> ${biome}
-                    `);
+                    const marker = L.circleMarker([lat, lng], { radius: 8, fillColor: '#e74c3c', color: '#fff' });
                     markersCluster.addLayer(marker);
                 }
-
                 listElement.appendChild(item);
             });
 
-            document.getElementById('metric-total-area').innerText = `${totalArea.toLocaleString('pt-BR', {minimumFractionDigits: 2})} ha`;
+            document.getElementById('metric-total-area').innerText = `${totalArea.toFixed(2)} ha`;
             document.getElementById('metric-alert-count').innerText = alerts.length;
-
-            let topBiome = '-';
-            let maxCount = 0;
-            for (const [b, count] of Object.entries(biomesCount)) {
-                if (count > maxCount) {
-                    maxCount = count;
-                    topBiome = b;
-                }
-            }
-            document.getElementById('metric-top-biome').innerText = topBiome;
-        }
-
-        function toggleChat() {
-            const chatBox = document.getElementById('chat-box');
-            chatBox.style.display = chatBox.style.display === 'flex' ? 'none' : 'flex';
-        }
-
-        async function sendQuestion() {
-            const input = document.getElementById('chat-input');
-            const question = input.value.trim();
-            if (!question) return;
-
-            const chatMessages = document.getElementById('chat-messages');
-
-            const userMsg = document.createElement('div');
-            userMsg.className = 'msg user';
-            userMsg.innerText = question;
-            chatMessages.appendChild(userMsg);
-
-            input.value = '';
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-
-            const botLoadingMsg = document.createElement('div');
-            botLoadingMsg.className = 'msg bot';
-            botLoadingMsg.id = 'bot-loading';
-            botLoadingMsg.innerText = 'Processando...';
-            chatMessages.appendChild(botLoadingMsg);
-
-            try {
-                const response = await fetch(`${GAS_ENDPOINT}?acao=gemini&pergunta=${encodeURIComponent(question)}`, { redirect: 'follow' });
-                const result = await response.text();
-
-                document.getElementById('bot-loading').remove();
-                
-                const botMsg = document.createElement('div');
-                botMsg.className = 'msg bot';
-                botMsg.innerText = result;
-                chatMessages.appendChild(botMsg);
-            } catch (error) {
-                document.getElementById('bot-loading').innerText = 'Erro ao responder consulta.';
-            }
-
-            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
     </script>
 </body>
