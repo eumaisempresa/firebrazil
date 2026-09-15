@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b5134">
+  <title>MapBiomas Monitor | Inteligência de Alertas</title>
+  
+  <!-- Inclusão correta do Leaflet CSS e JS para visualização de mapas -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <style>
+    :root {
+      --primary: #0b5134;
+      --primary-light: #167a52;
+      --accent: #d29e13;
+      --navy: #07131f;
+      --ink: #132331;
+      --muted: #6c7c88;
+      --line: #dce5ea;
+      --surface: #fff;
+      --surface-2: #f3f7f9;
+      --shadow: 0 18px 45px rgba(12,35,52,.10);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: var(--ink); background: var(--surface-2); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+    .hidden { display: none !important; }
+    .eyebrow { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 800; color: var(--primary-light); }
+    
+    /* Auth Shell */
+    .auth-shell { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(420px, .9fr); background: var(--navy); }
+    .auth-visual { position: relative; overflow: hidden; padding: clamp(32px, 6vw, 86px); display: flex; flex-direction: column; justify-content: space-between; background: linear-gradient(145deg, #052216 0%, #0b5134 65%, #0e6340 100%); color: #fff; }
+    .brand-lockup { position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; }
+    .brand-mark { width: 40px; height: 40px; border-radius: 13px; background: linear-gradient(135deg, #a7e084, var(--primary-light)); display: grid; place-items: center; color: #000; font-weight: 900; box-shadow: 0 8px 20px rgba(22,122,82,.3); }
+    .brand-name { font-weight: 850; letter-spacing: .04em; }
+    .brand-name span { color: #a7e084; }
+    .visual-copy { position: relative; z-index: 1; max-width: 650px; }
+    .visual-copy h1 { font-size: clamp(34px, 4.5vw, 68px); line-height: .98; letter-spacing: -.04em; margin: 26px 0 22px; }
+    .visual-copy h1 em { font-style: normal; color: var(--accent); }
+    .visual-copy p { max-width: 590px; font-size: 17px; line-height: 1.7; color: #b9ccd6; }
+    .visual-footer { position: relative; z-index: 1; color: #91acb9; font-size: 12px; line-height: 1.6; }
+    
+    .auth-panel { background: #f8fbfc; padding: clamp(26px, 5vw, 72px); display: flex; align-items: center; }
+    .auth-card { width: 100%; max-width: 500px; margin: auto; }
+    .auth-card h2 { font-size: 32px; letter-spacing: -.04em; margin: 10px 0 8px; }
+    .auth-card .lead { color: var(--muted); line-height: 1.55; margin: 0 0 26px; }
+    
+    .tabs { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: #e9f0f3; margin-bottom: 24px; }
+    .tab { border: 0; background: transparent; color: var(--muted); font-weight: 800; padding: 12px 15px; border-radius: 9px; flex: 1; }
+    .tab.active { background: #fff; color: var(--navy); box-shadow: 0 3px 9px rgba(16,40,56,.08); }
+    
+    .field { margin-bottom: 15px; }
+    .field label { display: block; font-size: 12px; font-weight: 800; color: #3f5561; margin-bottom: 7px; }
+    .field input { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 13px 14px; background: #fff; outline: none; transition: .2s; }
+    .field input:focus { border-color: var(--primary-light); box-shadow: 0 0 0 4px rgba(22,122,82,.12); }
+    .consent { display: flex; align-items: flex-start; gap: 9px; color: var(--muted); font-size: 11px; margin: 18px 0; }
+    
+    .primary-btn { border: 0; border-radius: 10px; padding: 14px 16px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff; font-weight: 850; box-shadow: 0 9px 18px rgba(11,81,52,.22); transition: .2s; }
+    .primary-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .primary-btn:disabled { opacity: .55; cursor: wait; }
+    .full { width: 100%; }
+    
+    .feedback { font-size: 12px; text-align: center; margin-top: 12px; min-height: 20px; }
+    .error { color: #b52d24; }
+    .success { color: #14764e; }
+    
+    /* App Shell */
+    .app-shell { min-height: 100vh; background: #eef4f6; }
+    .topbar { height: 74px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 clamp(18px, 4vw, 54px); }
+    .dashboard { max-width: 1600px; margin: 0 auto; padding: 30px clamp(18px, 4vw, 54px) 50px; }
+    .dashboard-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; margin-bottom: 23px; }
+    .dashboard-head h1 { margin: 7px 0 7px; font-size: clamp(25px, 3vw, 39px); letter-spacing: -.05em; }
+    
+    .refresh-btn { border: 0; border-radius: 10px; background: var(--primary); color: #fff; padding: 12px 16px; font-weight: 800; }
+    .ghost-btn { border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: #fff; border-radius: 9px; padding: 9px 12px; font-size: 12px; }
+    
+    /* KPIs */
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .kpi { background: #fff; border: 1px solid #e2ebef; border-radius: 14px; padding: 18px; box-shadow: var(--shadow); }
+    .kpi-value { font-size: 29px; font-weight: 900; color: var(--navy); margin: 13px 0 4px; }
+    .kpi.accent { background: linear-gradient(145deg, #0b5134, #052216); color: #fff; border: none; }
+    .kpi.accent .kpi-value { color: #fff; }
+    .kpi.accent .eyebrow { color: #a7e084; }
+    
+    /* Main Layout */
+    .content-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, .75fr); gap: 18px; }
+    .map-card, .side-card { background: #fff; border: 1px solid #e2ebef; border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+    .card-head { display: flex; align-items: center; justify-content: space-between; padding: 17px 19px; border-bottom: 1px solid #e7eef1; }
+    .card-title { font-weight: 900; }
+    .map-wrap { height: 550px; position: relative; }
+    .map { height: 100%; width: 100%; background: #d9e9ed; }
+    
+    /* City List */
+    .city-list { max-height: 480px; overflow-y: auto; padding: 15px; }
+    .city-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #edf2f4; }
+    .city-count { background: #e8fbfd; color: var(--primary-light); padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 13px; }
+    
+    /* Agent Flutuante do Gemini */
+    .gemini-bubble { position: fixed; bottom: 25px; right: 25px; z-index: 9999; }
+    .gemini-btn { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #1a73e8, #673ab7); border: none; color: white; font-size: 26px; display: grid; place-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: 0.3s; }
+    .gemini-btn:hover { transform: scale(1.05); }
+    
+    .gemini-window { position: absolute; bottom: 75px; right: 0; width: 360px; height: 0; background: white; border-radius: 16px; box-shadow: var(--shadow); border: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; opacity: 0; pointer-events: none; transition: 0.3s cubic-bezier(0.1, 0.8, 0.2, 1); }
+    .gemini-window.open { opacity: 1; transform: translateY(0); pointer-events: auto; height: 450px; }
+    
+    .gemini-header { background: linear-gradient(135deg, #1a73e8, #673ab7); color: white; padding: 15px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+    .gemini-body { flex: 1; overflow-y: auto; padding: 15px; font-size: 13px; line-height: 1.5; display: flex; flex-direction: column; gap: 10px; background: #fafafa; }
+    .gemini-footer { padding: 10px; border-top: 1px solid var(--line); display: flex; gap: 8px; background: white; }
+    .gemini-footer input { flex: 1; border: 1px solid var(--line); padding: 10px; border-radius: 8px; font-size: 13px; outline: none; }
+    
+    .msg { padding: 10px 14px; border-radius: 12px; max-width: 85%; word-wrap: break-word; }
+    .msg.user { background: #e3f2fd; color: #0d47a1; align-self: flex-end; }
+    .msg.bot { background: white; border: 1px solid var(--line); color: var(--ink); align-self: flex-start; }
+    
+    @media(max-width: 980px) {
+      .auth-shell { grid-template-columns: 1fr; }
+      .auth-visual { min-height: 300px; }
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+      .content-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TELA DE LOGIN / CADASTRO -->
+  <section id="auth-view" class="auth-shell">
+    <div class="auth-visual">
+      <div class="brand-lockup">
+        <div class="brand-mark">M</div>
+        <div class="brand-name">MAP<span>BIOMAS</span></div>
+      </div>
+      <div class="visual-copy">
+        <div class="eyebrow">Monitor de Supressão Vegetal</div>
+        <h1>Análise de dados de <em>desmatamento</em> estruturados.</h1>
+        <p>Acompanhamento analítico e integrador alimentado pela API do MapBiomas Alerta e assistido por inteligência artificial contextual.</p>
+      </div>
+      <div class="visual-footer">
+        Plataforma adaptada para visualização geográfica e conformidade ambiental institucional.
+      </div>
+    </div>
+    
+    <div class="auth-panel">
+      <div class="auth-card">
+        <div class="eyebrow">Acesso ao Monitoramento</div>
+        <h2>Acesse a Plataforma</h2>
+        <p class="lead">Insira suas credenciais ou crie uma conta de consulta interna.</p>
+        
+        <div class="tabs">
+          <button class="tab active" id="tab-login">Já tenho senha</button>
+          <button class="tab" id="tab-register">Quero me cadastrar</button>
+        </div>
+        
+        <!-- Formulário de Login -->
+        <form id="login-form">
+          <div class="field">
+            <label>E-mail Corporativo/Oficial</label>
+            <input type="email" id="login-email" required placeholder="nome@dominio.com">
+          </div>
+          <div class="field">
+            <label>Senha de Acesso</label>
+            <input type="password" id="login-senha" required placeholder="Digite sua senha">
+          </div>
+          <button type="submit" class="primary-btn full">Entrar no Dashboard</button>
+        </form>
+
+        <!-- Formulário de Cadastro (Oculto por padrão) -->
+        <form id="register-form" class="hidden">
+          <div class="field">
+            <label>Nome Completo</label>
+            <input type="text" id="reg-nome" required placeholder="Seu nome">
+          </div>
+          <div class="field">
+            <label>Profissão / Cargo</label>
+            <input type="text" id="reg-profissao" placeholder="Ex: Analista Ambiental">
+          </div>
+          <div class="field">
+            <label>E-mail</label>
+            <input type="email" id="reg-email" required placeholder="seuemail@dominio.com">
+          </div>
+          <div class="consent">
+            <input type="checkbox" id="reg-termo" required>
+            <label for="reg-termo">Aceito os termos de uso dos dados para consulta institucional.</label>
+          </div>
+          <button type="submit" class="primary-btn full">Solicitar Acesso</button>
+        </form>
+
+        <div id="auth-feedback" class="feedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TELA PRINCIPAL (DASHBOARD) -->
+  <section id="app-view" class="app-shell hidden">
+    <div class="topbar">
+      <div class="brand-lockup">
+        <div class="brand-mark">M</div>
+        <div class="brand-name">MAP<span>BIOMAS</span></div>
+      </div>
+      <div>
+        <span id="user-display" style="font-size:13px; margin-right:15px;"></span>
+        <button class="ghost-btn" id="logout-btn">Sair</button>
+      </div>
+    </div>
+
+    <div class="dashboard">
+      <div class="dashboard-head">
+        <div>
+          <div class="eyebrow">Painel Geral de Ocorrências</div>
+          <h1>MapBiomas Alerta V2</h1>
+        </div>
+        <button class="refresh-btn" id="btn-atualizar">⚡ Atualizar Base Oficial</button>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpis">
+        <div class="kpi accent">
+          <div class="eyebrow">Total de Alertas</div>
+          <div class="kpi-value" id="kpi-total">0</div>
+          <div style="font-size: 11px; opacity: 0.8;">Alertas processados</div>
+        </div>
+        <div class="kpi">
+          <div class="eyebrow">Área Desmatada</div>
+          <div class="kpi-value" id="kpi-area">0 ha</div>
+          <div style="font-size: 11px; color: var(--muted);">Hectares consolidados</div>
+        </div>
+        <div class="kpi">
+          <div class="eyebrow">Bioma Mais Afetado</div>
+          <div class="kpi-value" id="kpi-bioma" style="font-size: 20px;">-</div>
+          <div style="font-size: 11px; color: var(--muted);">Maior incidência de área</div>
+        </div>
+        <div class="kpi">
+          <div class="eyebrow">Última Sincronização</div>
+          <div class="kpi-value" id="kpi-data" style="font-size: 16px; margin-top:20px;">-</div>
+          <div style="font-size: 11px; color: var(--muted);">Data/Hora de atualização</div>
+        </div>
+      </div>
+
+      <!-- Grade Principal -->
+      <div class="content-grid">
+        <div class="map-card">
+          <div class="card-head">
+            <span class="card-title">Distribuição Territorial dos Alertas</span>
+          </div>
+          <div class="map-wrap">
+            <div id="map" class="map"></div>
+          </div>
+        </div>
+
+        <div class="side-card">
+          <div class="card-head">
+            <span class="card-title">Top Municípios Afetados</span>
+          </div>
+          <div class="city-list" id="city-list">
+            <div style="text-align: center; color: var(--muted); padding: 20px;">Nenhum dado carregado.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agent Flutuante (Gemini AI) -->
+    <div class="gemini-bubble">
+      <div class="gemini-window" id="gemini-window">
+        <div class="gemini-header">
+          <span>🤖 EcoAgent Gemini</span>
+          <button id="close-gemini" style="background:none; border:none; color:white; font-size:16px;">✕</button>
+        </div>
+        <div class="gemini-body" id="gemini-body">
+          <div class="msg bot">Olá! Sou o assistente inteligente do monitor. Como posso ajudar na análise dos alertas ambientais?</div>
+        </div>
+        <div class="gemini-footer">
+          <input type="text" id="gemini-input" placeholder="Faça uma pergunta sobre os dados...">
+          <button class="primary-btn" id="gemini-send" style="padding: 8px 12px;">Enviar</button>
+        </div>
+      </div>
+      <button class="gemini-btn" id="open-gemini">💬</button>
+    </div>
+  </section>
+
+  <!-- LÓGICA JAVASCRIPT -->
+  <script>
+    // Cole aqui a URL do seu Web App implantado via Google Apps Script
+    const WEB_APP_URL = 'https://script.google.com/macros/s/SEU_SCRIPT_ID_AQUI/exec';
+
+    let userSession = { email: '', senha: '' };
+    let mapInstance = null;
+
+    // Alternância de Abas Auth
+    document.getElementById('tab-login').onclick = () => switchTab('login');
+    document.getElementById('tab-register').onclick = () => switchTab('register');
+
+    function switchTab(tab) {
+      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+      document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+      document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+      document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
+      document.getElementById('auth-feedback').innerText = '';
+    }
+
+    // Ações de Autenticação
+    document.getElementById('login-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const senha = document.getElementById('login-senha').value;
+      
+      showFeedback('Verificando credenciais...', 'muted');
+      try {
+        const resp = await fetch(`${WEB_APP_URL}?acao=entrar&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}`);
+        const res = await resp.json();
+        
+        if (res.sucesso) {
+          userSession = { email, senha };
+          carregarDashboard();
+        } else {
+          showFeedback(res.erro || 'Falha ao autenticar.', 'error');
+        }
+      } catch (err) {
+        showFeedback('Erro de conexão com o servidor.', 'error');
+      }
+    };
+
+    document.getElementById('register-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const nome = document.getElementById('reg-nome').value;
+      const email = document.getElementById('reg-email').value;
+      const profissao = document.getElementById('reg-profissao').value;
+      const termo = document.getElementById('reg-termo').checked;
+
+      showFeedback('Processando cadastro...', 'muted');
+      try {
+        const resp = await fetch(`${WEB_APP_URL}?acao=cadastrar&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&profissao=${encodeURIComponent(profissao)}&termo=${termo}`);
+        const res = await resp.json();
+
+        if (res.sucesso) {
+          showFeedback(`Cadastro realizado! Sua senha foi enviada para ${email}.`, 'success');
+        } else {
+          showFeedback(res.erro || 'Erro ao realizar cadastro.', 'error');
+        }
+      } catch (err) {
+        showFeedback('Erro ao se conectar ao servidor.', 'error');
+      }
+    };
+
+    function showFeedback(msg, type) {
+      const fb = document.getElementById('auth-feedback');
+      fb.innerText = msg;
+      fb.className = `feedback ${type}`;
+    }
+
+    // Carregamento do Dashboard
+    async function carregarDashboard() {
+      document.getElementById('auth-view').classList.add('hidden');
+      document.getElementById('app-view').classList.remove('hidden');
+      document.getElementById('user-display').innerText = userSession.email;
+
+      initMap();
+      await atualizarDados();
+    }
+
+    async function atualizarDados() {
+      try {
+        const url = `${WEB_APP_URL}?acao=alertas&email=${encodeURIComponent(userSession.email)}&senha=${encodeURIComponent(userSession.senha)}`;
+        const resp = await fetch(url);
+        const res = await resp.json();
+
+        if (res.sucesso) {
+          renderizarKPIs(res.dados, res.atualizadoEm);
+          renderizarMunicipios(res.dados);
+        }
+      } catch (e) {
+        console.error('Erro ao carregar dados:', e);
+      }
+    }
+
+    document.getElementById('btn-atualizar').onclick = async () => {
+      const btn = document.getElementById('btn-atualizar');
+      btn.disabled = true;
+      btn.innerText = '⏳ Atualizando...';
+      try {
+        const url = `${WEB_APP_URL}?acao=atualizar&email=${encodeURIComponent(userSession.email)}&senha=${encodeURIComponent(userSession.senha)}`;
+        const resp = await fetch(url);
+        const res = await resp.json();
+        if (res.sucesso) {
+          renderizarKPIs(res.dados, res.atualizadoEm);
+          renderizarMunicipios(res.dados);
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '⚡ Atualizar Base Oficial';
+      }
+    };
+
+    function renderizarKPIs(dados, atualizadoEm) {
+      document.getElementById('kpi-total').innerText = dados.length;
+      
+      const totalArea = dados.reduce((acc, curr) => acc + (parseFloat(curr.area_ha) || 0), 0);
+      document.getElementById('kpi-area').innerText = `${totalArea.toFixed(1)} ha`;
+
+      const biomas = {};
+      dados.forEach(d => { if(d.bioma) biomas[d.bioma] = (biomas[d.bioma] || 0) + 1; });
+      const topBioma = Object.keys(biomas).sort((a,b) => biomas[b] - biomas[a])[0] || '-';
+      document.getElementById('kpi-bioma').innerText = topBioma;
+
+      document.getElementById('kpi-data').innerText = atualizadoEm ? new Date(atualizadoEm).toLocaleString('pt-BR') : 'Sem data';
+    }
+
+    function renderizarMunicipios(dados) {
+      const mun = {};
+      dados.forEach(d => {
+        if(d.municipio) mun[d.municipio] = (mun[d.municipio] || 0) + 1;
+      });
+
+      const ordenados = Object.entries(mun).sort((a,b) => b[1] - a[1]);
+      const listEl = document.getElementById('city-list');
+      
+      if(ordenados.length === 0) {
+        listEl.innerHTML = '<div style="text-align: center; color: var(--muted); padding: 20px;">Nenhum alerta registrado.</div>';
+        return;
+      }
+
+      listEl.innerHTML = ordenados.slice(0, 15).map(([cidade, qtd]) => `
+        <div class="city-row">
+          <span style="font-weight:600;">${cidade}</span>
+          <span class="city-count">${qtd} alertas</span>
+        </div>
+      `).join('');
+    }
+
+    // Inicialização do Mapa
+    function initMap() {
+      if (!mapInstance) {
+        mapInstance = L.map('map').setView([-14.235, -51.925], 4);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© MapBiomas / OpenStreetMap'
+        }).addTo(mapInstance);
+      }
+    }
+
+    // Chat Inteligente Gemini
+    const geminiWin = document.getElementById('gemini-window');
+    document.getElementById('open-gemini').onclick = () => geminiWin.classList.toggle('open');
+    document.getElementById('close-gemini').onclick = () => geminiWin.classList.remove('open');
+
+    document.getElementById('gemini-send').onclick = enviarPerguntaGemini;
+    document.getElementById('gemini-input').onkeypress = (e) => { if(e.key === 'Enter') enviarPerguntaGemini(); };
+
+    async function enviarPerguntaGemini() {
+      const input = document.getElementById('gemini-input');
+      const pergunta = input.value.trim();
+      if(!pergunta) return;
+
+      const body = document.getElementById('gemini-body');
+      body.innerHTML += `<div class="msg user">${pergunta}</div>`;
+      input.value = '';
+      body.scrollTop = body.scrollHeight;
+
+      try {
+        const resp = await fetch(`${WEB_APP_URL}?acao=chat&pergunta=${encodeURIComponent(pergunta)}`);
+        const res = await resp.json();
+        body.innerHTML += `<div class="msg bot">${res.resposta || 'Não foi possível obter resposta.'}</div>`;
+      } catch (e) {
+        body.innerHTML += `<div class="msg bot">Erro ao comunicar com a IA.</div>`;
+      }
+      body.scrollTop = body.scrollHeight;
+    }
+
+    // Logout
+    document.getElementById('logout-btn').onclick = () => {
+      userSession = { email: '', senha: '' };
+      document.getElementById('app-view').classList.add('hidden');
+      document.getElementById('auth-view').classList.remove('hidden');
+    };
+  </script>
+</body>
+</html>
