@@ -63,7 +63,7 @@
         .card-metric h2 { font-size: 1.1rem; margin-top: 4px; }
         .data-list-container { flex: 1; overflow-y: auto; padding: 15px; }
         .alert-item { background-color: var(--bg-card); padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid var(--accent-alert); font-size: 0.85rem; cursor: pointer; }
-        
+
         #map-container { flex: 1; position: relative; }
         #map { width: 100%; height: 100%; }
         .dark-tiles .leaflet-tile-pane { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3); }
@@ -141,10 +141,15 @@
         });
 
         function initMap() {
-            map = L.map('map', { zoomControl: false }).setView([-14.2350, -51.9253], 4);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-            markersCluster = L.markerClusterGroup({ chunkedLoading: true });
-            map.addLayer(markersCluster);
+            if (!map) {
+                map = L.map('map', { zoomControl: false }).setView([-14.2350, -51.9253], 4);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+            }
+            
+            if (!markersCluster) {
+                markersCluster = L.markerClusterGroup({ chunkedLoading: true });
+                map.addLayer(markersCluster);
+            }
         }
 
         async function handleAuth(e) {
@@ -169,7 +174,7 @@
 
                 const response = await fetch(url, { method: 'GET' });
                 const res = await response.json();
-                
+
                 if (res.sucesso) {
                     document.getElementById('auth-overlay').style.display = 'none';
                     document.getElementById('user-display').innerText = `Usuário: ${nome} (Senha: ${res.senha || 'OK'})`;
@@ -188,7 +193,13 @@
         function renderDashboard(alerts) {
             const listElement = document.getElementById('alerts-list');
             listElement.innerHTML = '';
-            markersCluster.clearLayers();
+
+            // Garante inicialização prévia do mapa e da camada de marcadores se não existirem
+            if (!map || !markersCluster) {
+                initMap();
+            } else {
+                markersCluster.clearLayers();
+            }
 
             if (!alerts || alerts.length === 0) {
                 listElement.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 20px;">Nenhum alerta salvo na planilha. Execute a função buscarDadosMapBiomas no Apps Script.</p>';
@@ -201,7 +212,7 @@
             alerts.forEach(alert => {
                 const area = parseFloat(alert.area_ha || alert.area || 0);
                 totalArea += area;
-                
+
                 const biome = alert.bioma || alert.biome || 'Outros';
                 if (biome && biome !== 'Outros') {
                     biomesCount[biome] = (biomesCount[biome] || 0) + 1;
