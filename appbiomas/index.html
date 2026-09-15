@@ -167,23 +167,19 @@
                     + `&whatsapp=${encodeURIComponent(whatsapp)}`
                     + `&termo=true`;
 
-                const response = await fetch(url, {
-                    method: 'GET',
-                    redirect: 'follow'
-                });
-                
+                const response = await fetch(url, { method: 'GET' });
                 const res = await response.json();
                 
                 if (res.sucesso) {
                     document.getElementById('auth-overlay').style.display = 'none';
-                    document.getElementById('user-display').innerText = `Usuário: ${nome}`;
+                    document.getElementById('user-display').innerText = `Usuário: ${nome} (Senha: ${res.senha || 'OK'})`;
                     renderDashboard(res.dados || []);
                 } else {
                     alert('Erro ao registrar: ' + res.erro);
                 }
             } catch (err) {
                 console.error(err);
-                alert('Falha na comunicação com o servidor.');
+                alert('Falha na comunicação com o servidor: ' + err.message);
             } finally {
                 btn.innerText = 'Entrar e Salvar';
             }
