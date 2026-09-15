@@ -33,13 +33,16 @@
 
         .auth-card {
             background-color: var(--bg-surface); border: 1px solid var(--border-color);
-            padding: 30px; border-radius: 12px; width: 100%; max-width: 400px; text-align: center;
+            padding: 30px; border-radius: 12px; width: 100%; max-width: 440px; text-align: center;
+            max-height: 90vh; overflow-y: auto;
         }
 
         .auth-card h2 { color: var(--accent-green); margin-bottom: 8px; }
         .auth-card p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; }
-        .auth-form { display: flex; flex-direction: column; gap: 15px; text-align: left; }
-        .auth-form label { font-size: 0.8rem; color: var(--text-muted); }
+        .auth-form { display: flex; flex-direction: column; gap: 12px; text-align: left; }
+        .auth-form-row { display: flex; gap: 10px; }
+        .auth-form-row > div { flex: 1; }
+        .auth-form label { font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px; }
         .auth-form input {
             width: 100%; padding: 10px; background: var(--bg-card);
             border: 1px solid var(--border-color); color: #fff; border-radius: 6px; outline: none;
@@ -71,15 +74,29 @@
     <div id="auth-overlay">
         <div class="auth-card">
             <h2><i class="fa-solid fa-tree"></i> MapBiomas Alerta</h2>
-            <p>Cadastre-se para liberar os dados no painel</p>
+            <p>Preencha os dados de cadastro para liberar o painel</p>
             <form class="auth-form" onsubmit="handleAuth(event)">
                 <div>
-                    <label>Nome Completo</label>
+                    <label>Nome Completo *</label>
                     <input type="text" id="auth-name" required placeholder="Seu nome">
                 </div>
                 <div>
-                    <label>E-mail</label>
+                    <label>E-mail *</label>
                     <input type="email" id="auth-email" required placeholder="seu@email.com">
+                </div>
+                <div>
+                    <label>Profissão</label>
+                    <input type="text" id="auth-profissao" placeholder="Ex: Engenheiro Ambiental">
+                </div>
+                <div class="auth-form-row">
+                    <div>
+                        <label>Idade</label>
+                        <input type="number" id="auth-idade" min="18" max="120" placeholder="Ex: 30">
+                    </div>
+                    <div>
+                        <label>WhatsApp</label>
+                        <input type="tel" id="auth-whatsapp" placeholder="(00) 00000-0000">
+                    </div>
                 </div>
                 <button type="submit" id="btn-auth" class="btn-submit">Entrar e Salvar</button>
             </form>
@@ -137,10 +154,20 @@
 
             const nome = document.getElementById('auth-name').value;
             const email = document.getElementById('auth-email').value;
+            const profissao = document.getElementById('auth-profissao').value;
+            const idade = document.getElementById('auth-idade').value;
+            const whatsapp = document.getElementById('auth-whatsapp').value;
 
             try {
-                // Envia para o Apps Script gravar no Sheets
-                const response = await fetch(`${GAS_ENDPOINT}?acao=cadastrar&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&termo=true`, {
+                const url = `${GAS_ENDPOINT}?acao=cadastrar`
+                    + `&nome=${encodeURIComponent(nome)}`
+                    + `&email=${encodeURIComponent(email)}`
+                    + `&profissao=${encodeURIComponent(profissao)}`
+                    + `&idade=${encodeURIComponent(idade)}`
+                    + `&whatsapp=${encodeURIComponent(whatsapp)}`
+                    + `&termo=true`;
+
+                const response = await fetch(url, {
                     method: 'GET',
                     redirect: 'follow'
                 });
@@ -178,14 +205,17 @@
             alerts.forEach(alert => {
                 const area = parseFloat(alert.area_ha || alert.area || 0);
                 totalArea += area;
+                
                 const biome = alert.bioma || alert.biome || 'Outros';
-                biomesCount[biome] = (biomesCount[biome] || 0) + 1;
+                if (biome && biome !== 'Outros') {
+                    biomesCount[biome] = (biomesCount[biome] || 0) + 1;
+                }
 
                 const item = document.createElement('div');
                 item.className = 'alert-item';
                 item.innerHTML = `
                     <header><b>Alerta: ${alert.codigo || alert.id}</b> - <span style="color: var(--accent-alert);">${area.toFixed(2)} ha</span></header>
-                    <p><i class="fa-solid fa-location-dot"></i> ${alert.municipio || 'N/I'} - ${alert.estado || 'UF'}</p>
+                    <p><i class="fa-solid fa-location-dot"></i> ${alert.municipio || 'N/I'} - ${alert.estado || 'UF'} (${biome})</p>
                 `;
 
                 const lat = parseFloat(alert.latitude || alert.lat);
@@ -193,14 +223,25 @@
 
                 if (!isNaN(lat) && !isNaN(lng)) {
                     item.onclick = () => map.setView([lat, lng], 12);
-                    const marker = L.circleMarker([lat, lng], { radius: 8, fillColor: '#e74c3c', color: '#fff' });
+                    const marker = L.circleMarker([lat, lng], { radius: 8, fillColor: '#e74c3c', color: '#fff', weight: 2, fillOpacity: 0.8 });
+                    marker.bindPopup(`<b>Alerta: ${alert.codigo || alert.id}</b><br>Área: ${area.toFixed(2)} ha<br>Bioma: ${biome}`);
                     markersCluster.addLayer(marker);
                 }
                 listElement.appendChild(item);
             });
 
+            let topBiome = '-';
+            let maxCount = 0;
+            for (const b in biomesCount) {
+                if (biomesCount[b] > maxCount) {
+                    maxCount = biomesCount[b];
+                    topBiome = b;
+                }
+            }
+
             document.getElementById('metric-total-area').innerText = `${totalArea.toFixed(2)} ha`;
             document.getElementById('metric-alert-count').innerText = alerts.length;
+            document.getElementById('metric-top-biome').innerText = topBiome;
         }
     </script>
 </body>
